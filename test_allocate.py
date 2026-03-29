@@ -12,9 +12,9 @@ data = g.generate_complete_project_dataset()
 print('Creating analyzer...')
 an = ResourceLoadAnalyzer(data['team'], data['backlog'])
 
-print('Allocating resources...')
+print('Allocating resources with strict constraints...')
 try:
-    result = an.allocate_resources()
+    result = an.allocate_resources(respect_capacity_limits=True)
     print('Success!')
     print(result.keys())
 except Exception as e:

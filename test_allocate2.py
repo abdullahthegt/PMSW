@@ -12,8 +12,8 @@ data = g.generate_complete_project_dataset()
 print('Creating analyzer...')
 an = ResourceLoadAnalyzer(data['team'], data['backlog'])
 
-print('Allocating resources...')
-result = an.allocate_resources()
+print('Allocating resources with strict constraints...')
+result = an.allocate_resources(respect_capacity_limits=True)
 print('Success!')
 
 print('\nAllocation DataFrame columns:', result['allocation_df'].columns.tolist())

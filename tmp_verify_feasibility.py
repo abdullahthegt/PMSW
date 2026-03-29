@@ -11,7 +11,7 @@ data = g.generate_complete_project_dataset()
 print('team rows', len(data['team']), 'backlog rows', len(data['backlog']))
 
 an = ResourceLoadAnalyzer(data['team'], data['backlog'])
-r = an.allocate_resources()
+r = an.allocate_resources(respect_capacity_limits=True)
 print('feasible', r['feasibility'])
 print('infeasible tasks', len(r['infeasible_tasks']))
 print('summary', an.get_allocation_summary())

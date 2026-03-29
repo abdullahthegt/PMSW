@@ -623,8 +623,8 @@ with tab2:
         st.session_state.dataset["backlog"]
     )
     
-    # Perform allocation
-    allocation_result = analyzer.allocate_resources()
+    # Perform allocation with strict capacity and skill constraints
+    allocation_result = analyzer.allocate_resources(respect_capacity_limits=True)
     summary = analyzer.get_allocation_summary()
     
     # Summary metrics

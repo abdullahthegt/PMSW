@@ -103,8 +103,8 @@ def main():
         dataset["backlog"]
     )
     
-    print("\nPerforming resource allocation...")
-    result = analyzer.allocate_resources()
+    print("\nPerforming resource allocation with strict constraints...")
+    result = analyzer.allocate_resources(respect_capacity_limits=True)
     summary = analyzer.get_allocation_summary()
     
     print("\n📊 Allocation Summary:")

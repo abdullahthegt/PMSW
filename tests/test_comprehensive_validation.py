@@ -320,7 +320,7 @@ class ProjectValidator:
             return
         
         try:
-            result = analyzer.allocate_resources()
+            result = analyzer.allocate_resources(respect_capacity_limits=True)
             self.log_test("Execute resource allocation", True)
         except Exception as e:
             self.log_test("Execute resource allocation", False, str(e)[:50])
@@ -444,7 +444,7 @@ class ProjectValidator:
             
             # Test resource allocation
             analyzer = ResourceLoadAnalyzer(dataset['team'], dataset['backlog'])
-            allocation = analyzer.allocate_resources()
+            allocation = analyzer.allocate_resources(respect_capacity_limits=True)
             
             # All steps successful
             self.log_test("Full workflow integration", True,
@@ -463,7 +463,7 @@ class ProjectValidator:
                     num_historical_sprints=5
                 )
                 analyzer = ResourceLoadAnalyzer(dataset['team'], dataset['backlog'])
-                analyzer.allocate_resources()
+                analyzer.allocate_resources(respect_capacity_limits=True)
             
             self.log_test("Multi-seed robustness", True,
                          "All 4 different seeds processed successfully")

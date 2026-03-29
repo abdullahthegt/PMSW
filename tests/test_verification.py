@@ -161,9 +161,9 @@ class ConstraintValidator:
             team_df = dataset['team']
             tasks_df = dataset['backlog']
             
-            # Allocate resources
+            # Allocate resources with STRICT capacity and skill constraints
             analyzer = ResourceLoadAnalyzer(team_df, tasks_df)
-            allocation_result = analyzer.allocate_resources()
+            allocation_result = analyzer.allocate_resources(respect_capacity_limits=True)
             allocation_df = allocation_result['allocation_df']
             
             # Check SKILL constraint

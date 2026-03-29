@@ -202,8 +202,8 @@ class ProjectValidator:
         # Initialize analyzer
         analyzer = ResourceLoadAnalyzer(team_df, backlog_df)
 
-        # Test allocation
-        allocation_result = analyzer.allocate_resources()
+        # Test allocation with strict constraints
+        allocation_result = analyzer.allocate_resources(respect_capacity_limits=True)
         results['allocation_result'] = allocation_result
 
         # Analyze allocation results
@@ -261,7 +261,7 @@ class ProjectValidator:
 
         # Resource allocation
         analyzer = ResourceLoadAnalyzer(dataset['team'], dataset['backlog'])
-        allocation_result = analyzer.allocate_resources()
+        allocation_result = analyzer.allocate_resources(respect_capacity_limits=True)
         resource_summary = analyzer.get_allocation_summary()
 
         # Integration metrics

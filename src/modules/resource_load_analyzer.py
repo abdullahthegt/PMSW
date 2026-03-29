@@ -26,9 +26,21 @@ class TeamMember:
         self.assigned_tasks = []
         self.load_percent = 0.0
 
-    def can_handle_task(self, required_skills: List[str]) -> bool:
-        """Check if member has required skills"""
-        return any(skill in self.skills for skill in required_skills)
+    def can_handle_task(self, required_skills: List[str], strict_mode: bool = False) -> bool:
+        """
+        Check if member has required skills.
+        
+        Args:
+            required_skills: List of skills needed for the task
+            strict_mode: If True, ALL required skills must match. If False, ANY skill match is ok.
+                For safety-critical tasks, use strict_mode=True.
+        """
+        if strict_mode:
+            # ALL required skills must be present (strict for safety-critical)
+            return all(skill in self.skills for skill in required_skills)
+        else:
+            # At least ONE required skill must be present (lenient)
+            return any(skill in self.skills for skill in required_skills)
 
     def assign_task(self, task_id: int, estimated_hours: float) -> bool:
         """Attempt to assign task"""
@@ -221,9 +233,13 @@ class ResourceLoadAnalyzer:
         }
         return colors.get(status, "#FFFFFF")
 
-    def allocate_resources(self) -> Dict:
+    def allocate_resources(self, respect_capacity_limits: bool = True) -> Dict:
         """
-        Allocate tasks to team members using greedy heuristic.
+        Allocate tasks to team members using greedy heuristic with constraints.
+        
+        Args:
+            respect_capacity_limits: If True, never exceed 100% member utilization.
+                                    If False, allows overload (legacy behavior).
         
         Returns:
             Dict with allocation results, feasibility, and bottleneck analysis
@@ -238,10 +254,15 @@ class ResourceLoadAnalyzer:
 
         allocation_details = []
         infeasible_tasks = []
+        deferred_tasks = []
 
         for task in sorted_tasks:
+            # Determine if strict skill matching is required
+            # ASIL-C/D tasks require ALL required skills (strict mode)
+            strict_mode = task.asil in ["C", "D"]
+            
             # Find capable team members
-            candidates = [m for m in self.team if m.can_handle_task(task.required_skills)]
+            candidates = [m for m in self.team if m.can_handle_task(task.required_skills, strict_mode=strict_mode)]
 
             if not candidates:
                 task.feasible = False
@@ -250,6 +271,7 @@ class ResourceLoadAnalyzer:
                 continue
 
             # Sort candidates by remaining capacity (best-fit)
+            # Prioritize members with more available capacity
             candidates.sort(key=lambda m: m.remaining_capacity, reverse=True)
 
             assigned = False
@@ -261,14 +283,17 @@ class ResourceLoadAnalyzer:
                     break
 
             if not assigned:
-                task.feasible = False
-                task.bottleneck_reason = "Insufficient capacity in qualified team members"
-                infeasible_tasks.append(task)
-                
-                # Try to assign anyway and flag as overload
-                best_fit = min(candidates, key=lambda m: abs(m.remaining_capacity - task.estimated_hours))
-                best_fit.assign_task(task.id, task.estimated_hours)
-                task.assigned_to = best_fit.name
+                # Task couldn't be assigned within capacity limits
+                if respect_capacity_limits:
+                    # Respect capacity constraints - defer the task
+                    task.feasible = False
+                    task.bottleneck_reason = "Deferred - insufficient capacity in qualified team members"
+                    deferred_tasks.append(task)
+                else:
+                    # Legacy behavior: force assignment and flag as overload
+                    best_fit = min(candidates, key=lambda m: abs(m.remaining_capacity - task.estimated_hours))
+                    best_fit.assign_task(task.id, task.estimated_hours)
+                    task.assigned_to = best_fit.name
 
         # Compute final statuses for all tasks
         for task in self.tasks:
@@ -291,13 +316,15 @@ class ResourceLoadAnalyzer:
             })
 
         # Analyze bottlenecks
-        bottleneck_analysis = self._analyze_bottlenecks(infeasible_tasks)
+        bottleneck_analysis = self._analyze_bottlenecks(infeasible_tasks + deferred_tasks)
 
         self.allocation_result = {
             "allocation_df": pd.DataFrame(allocation_details),
             "infeasible_tasks": infeasible_tasks,
+            "deferred_tasks": deferred_tasks,
             "bottleneck_analysis": bottleneck_analysis,
             "team_status": self._get_team_status(),
+            "allocation_strategy": "Capacity-Respecting" if respect_capacity_limits else "Aggressive",
         }
 
         return self.allocation_result
@@ -849,7 +876,7 @@ if __name__ == "__main__":
     dataset = generator.generate_complete_project_dataset()
     
     analyzer = ResourceLoadAnalyzer(dataset["team"], dataset["backlog"])
-    result = analyzer.allocate_resources()
+    result = analyzer.allocate_resources(respect_capacity_limits=True)
     
     print("RESOURCE LOAD ANALYSIS")
     print("=" * 60)
