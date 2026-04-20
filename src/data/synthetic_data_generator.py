@@ -246,11 +246,17 @@ class SyntheticDataGenerator:
         task_id = 1
         task_type_sequence = []
 
+        # Remainder distribution ensures task count always matches requested total
+        num_phases = 4
+        base = num_stories // num_phases
+        remainder = num_stories % num_phases
+        phase_counts = [base + 1 if i < remainder else base for i in range(num_phases)]
+
         # Create V-Model structure: Requirements → Design → Code → Test
         for phase_idx, task_type in enumerate(
             [TaskType.REQUIREMENT, TaskType.DESIGN, TaskType.CODE, TaskType.TEST]
         ):
-            tasks_per_phase = max(1, num_stories // 4)
+            tasks_per_phase = phase_counts[phase_idx]
             
             for j in range(tasks_per_phase):
                 asil = np.random.choice(asils, p=asil_probs)
@@ -269,11 +275,12 @@ class SyntheticDataGenerator:
                         if prev_task_id >= 1:
                             predecessors.append(prev_task_id)
                 
-                # Estimate hours: SP * 8 hours + ASIL overhead + noise
+                # Estimate hours: SP * 8 hours * ASIL overhead * probabilistic noise
                 base_hours = story_points * 8
                 asil_factor = self.ASIL_EFFORT_MULTIPLIERS[asil]
-                estimated_hours = base_hours * asil_factor + np.random.normal(0, base_hours * 0.1)
-                estimated_hours = max(base_hours, estimated_hours)
+                # Lognormal noise simulates probabilistic calibration uncertainty in SP-to-hours conversion
+                noise = np.random.lognormal(mean=0.0, sigma=0.2)
+                estimated_hours = base_hours * asil_factor * noise
                 
                 # Map to ASPICE level
                 type_to_aspice = {
@@ -445,13 +452,13 @@ class SyntheticDataGenerator:
     # Helper methods
     @staticmethod
     def _generate_story_points() -> int:
-        """Generate story points following Fibonacci sequence with Gamma distribution."""
+        """Generate story points following Planning Poker sequence with Gamma distribution."""
         # Gamma distribution skewed right (many small tasks, few large ones)
         points = np.random.gamma(shape=2, scale=2)
-        fibonacci = [1, 2, 3, 5, 8, 13, 21, 34]
+        planning_poker = [1, 2, 3, 5, 8, 13, 20, 40, 100]
         
-        # Round to nearest Fibonacci number
-        closest = min(fibonacci, key=lambda x: abs(x - points))
+        # Round to nearest Planning Poker number
+        closest = min(planning_poker, key=lambda x: abs(x - points))
         return closest
 
     @staticmethod

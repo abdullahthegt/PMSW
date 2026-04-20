@@ -121,10 +121,9 @@ class ProjectValidator:
         
         # Validate backlog data
         backlog_df = dataset['backlog']
-        if len(backlog_df) == 25:
-            self.log_test("Backlog size matches request", True, f"Generated {len(backlog_df)} tasks")
-        else:
-            self.log_test("Backlog size matches request", False, f"Expected 25, got {len(backlog_df)}")
+        backlog_count_exact = len(backlog_df) == 25
+        self.log_test("Backlog size matches request (exact)", backlog_count_exact, 
+                     f"Expected 25, got {len(backlog_df)} tasks")
         
         required_backlog_cols = {'TaskID', 'Title', 'Type', 'ASIL', 'StoryPoints', 'EstimatedHours'}
         backlog_cols_present = required_backlog_cols.issubset(set(backlog_df.columns))
