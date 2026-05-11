@@ -176,13 +176,21 @@ class SyntheticDataGenerator:
         )
 
         team_members = []
+        used_names: set = set()
         for i in range(size):
             member_id = i + 1
             role = roles[i]
             seniority = seniorities[i]
-            
-            # Generate name
-            name = f"{self._get_random_name()} {self._get_random_surname()}"
+
+            # Generate a unique name; append member_id suffix if all combos exhausted
+            for attempt in range(200):
+                candidate = f"{self._get_random_name()} {self._get_random_surname()}"
+                if candidate not in used_names:
+                    break
+            else:
+                candidate = f"{candidate} {member_id}"
+            name = candidate
+            used_names.add(name)
             
             # Assign skills based on role
             base_skills = self.ROLE_SKILLS[role].copy()
@@ -431,16 +439,16 @@ class SyntheticDataGenerator:
         print(f"Generating synthetic dataset for '{project_name}'...")
         
         team_df = self.generate_team_members(team_size)
-        print(f"✓ Generated {len(team_df)} team members")
-        
+        print(f"  Generated {len(team_df)} team members")
+
         backlog_df = self.generate_product_backlog(project_name, num_stories)
-        print(f"✓ Generated {len(backlog_df)} backlog items")
-        
+        print(f"  Generated {len(backlog_df)} backlog items")
+
         history_df = self.generate_historical_sprints(num_historical_sprints, team_size)
-        print(f"✓ Generated {num_historical_sprints} historical sprints")
-        
+        print(f"  Generated {num_historical_sprints} historical sprints")
+
         risks_df = self.generate_risk_register(10)
-        print(f"✓ Generated {len(risks_df)} risks")
+        print(f"  Generated {len(risks_df)} risks")
         
         return {
             "team": team_df,

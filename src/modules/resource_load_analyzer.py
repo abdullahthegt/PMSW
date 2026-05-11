@@ -611,74 +611,9 @@ class ResourceLoadAnalyzer:
             "QM": "No Safety\nRequirement"
         }
         
-        ax.set_xticklabels([f"{asil}\n{asil_desc[asil]}" for asil in asils], 
-                          fontsize=10, fontweight="medium", color="#424242")
-        ax.set_ylabel("Estimated Hours", fontsize=12, fontweight="medium", color="#424242")
-        ax.set_title("Safety-Criticality (ASIL) Distribution", fontsize=16, fontweight="bold", 
-                    color="#212121", pad=20)
-        
-        # Clean styling
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.spines['left'].set_color('#BDBDBD')
-        ax.spines['bottom'].set_color('#BDBDBD')
-        ax.grid(True, axis="y", alpha=0.2, linestyle='-', color='#E0E0E0')
-        ax.set_axisbelow(True)
-        ax.tick_params(axis='both', which='major', labelsize=10, colors='#616161')
-        
-        plt.tight_layout()
-        
-        return fig
-
-    def generate_asil_distribution_chart(self, figsize: Tuple = (10, 6)) -> plt.Figure:
-        """
-        Generate visualization of ASIL (safety criticality) distribution across tasks.
-
-        Returns:
-            matplotlib figure object
-        """
-        asil_dist = self.get_asil_distribution()
-        
-        # Sort by safety criticality (D is highest)
-        asil_order = ["D", "C", "B", "A", "QM"]
-        asil_dist_sorted = {asil: asil_dist[asil] for asil in asil_order if asil in asil_dist}
-        
-        # Modern color scheme (darker = more critical)
-        colors = {
-            "D": "#B71C1C",      # Dark red (highest criticality)
-            "C": "#D32F2F",      # Red
-            "B": "#FF9800",      # Orange
-            "A": "#FBC02D",      # Amber
-            "QM": "#4CAF50"      # Green (no safety requirement)
-        }
-        
-        fig, ax = plt.subplots(figsize=figsize, facecolor='white')
-        
-        asils = list(asil_dist_sorted.keys())
-        hours = [asil_dist_sorted[asil]["hours"] for asil in asils]
-        bar_colors = [colors[asil] for asil in asils]
-        
-        bars = ax.bar(asils, hours, color=bar_colors, edgecolor='white', linewidth=2, alpha=0.9)
-        
-        # Add value labels and percentage
-        for bar, asil in zip(bars, asils):
-            height = bar.get_height()
-            pct = asil_dist_sorted[asil]["percentage"]
-            ax.text(bar.get_x() + bar.get_width() / 2, height,
-                   f"{height:.0f}h\n({pct:.1f}%)",
-                   ha="center", va="bottom", fontsize=11, fontweight="bold")
-        
-        # ASIL descriptions
-        asil_desc = {
-            "D": "Highest Safety\nCriticality",
-            "C": "High Safety\nCriticality",
-            "B": "Medium Safety\nCriticality",
-            "A": "Low Safety\nCriticality",
-            "QM": "No Safety\nRequirement"
-        }
-        
-        ax.set_xticklabels([f"{asil}\n{asil_desc[asil]}" for asil in asils], 
-                          fontsize=10, fontweight="medium", color="#424242")
+        ax.set_xticks(range(len(asils)))
+        ax.set_xticklabels([f"{asil}\n{asil_desc[asil]}" for asil in asils],
+                           fontsize=10, fontweight="medium", color="#424242")
         ax.set_ylabel("Estimated Hours", fontsize=12, fontweight="medium", color="#424242")
         ax.set_title("Safety-Criticality (ASIL) Distribution", fontsize=16, fontweight="bold", 
                     color="#212121", pad=20)

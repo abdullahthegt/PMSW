@@ -471,17 +471,16 @@ with tab1:
     # Velocity forecast report
     st.subheader("🎯 Sprint Planning Scenarios")
 
-    st.markdown("**Choose your sprint goal:** Compare different story point targets with success probabilities.")
+    st.markdown("**Choose your sprint goal:** Each row shows the SP target your team can achieve at the given probability level.")
 
-    report = predictor.generate_velocity_report(
-        planned_sp_options=[20, 25, 30, 35, 40, 45, 50]
-    )
+    report = predictor.generate_velocity_report()
 
-    # Enhanced risk highlighting
+    # Enhanced risk highlighting — uses ProbabilityTarget (e.g. "90%") from quantile table
     def highlight_risk_enhanced(row):
-        if row["SuccessProbability"] > 80:
+        pct = int(row["ProbabilityTarget"].strip("%"))
+        if pct >= 80:
             return ["background-color: #E8F5E9; color: #2E7D32"] * len(row)  # Green
-        elif row["SuccessProbability"] > 60:
+        elif pct >= 60:
             return ["background-color: #FFF3E0; color: #E65100"] * len(row)  # Orange
         else:
             return ["background-color: #FFEBEE; color: #C62828"] * len(row)  # Red
@@ -491,8 +490,8 @@ with tab1:
         width='stretch',
         hide_index=True,
         column_config={
-            "PlannedSP": st.column_config.NumberColumn("Sprint Goal", help="Story points to plan for"),
-            "SuccessProbability": st.column_config.NumberColumn("Success Chance", help="Probability of completing this many points", format="%.1f%%"),
+            "ProbabilityTarget": st.column_config.TextColumn("Success Chance", help="Probability of completing at least this many story points"),
+            "PlannedSP": st.column_config.NumberColumn("Sprint Goal (SP)", help="Story points you can target at this confidence level"),
             "RiskCategory": st.column_config.TextColumn("Risk Level", help="Low/Medium/High risk assessment"),
             "Recommendation": st.column_config.TextColumn("Planning Advice", help="Recommendation for this target")
         }
@@ -537,9 +536,9 @@ with tab1:
 
         st.markdown("""
         **🎲 Understanding probabilities:**
-        - **Green line (50%):** Coin flip - might complete, might not
-        - **Orange line (80%):** Good bet - likely to succeed
-        - **Red line (90%):** Optimistic - best case scenario
+        - **Green line (50%):** 50% chance your team completes at least this many SP
+        - **Orange line (80%):** 80% chance your team completes at least this many SP — safe planning target
+        - **Red line (90%):** 90% chance your team completes at least this many SP — conservative target
         - **Purple line:** Your recent average performance
         """)
 
@@ -949,7 +948,7 @@ with tab3:
         st.subheader("Risk Register")
         st.dataframe(
             st.session_state.dataset["risks"],
-            use_container_width=True,
+            width='stretch',
             hide_index=True
         )
         
@@ -977,7 +976,7 @@ with tab4:
         st.subheader("🧪 Test Suite Status")
     
     with col_validate2:
-        if st.button("🔄 Run Tests", use_container_width=True):
+        if st.button("🔄 Run Tests", width='stretch'):
             st.session_state.validation_run = True
     
     # Validation metrics
@@ -1156,7 +1155,7 @@ with tab4:
             
             ax.set_title('Overall Test Status', fontsize=14, fontweight='bold', pad=20)
             
-            st.pyplot(fig, use_container_width=True)
+            st.pyplot(fig, width='stretch')
         
         with col_chart2:
             st.markdown("### Summary")
@@ -1200,7 +1199,7 @@ with tab4:
         for i, (bar, rate) in enumerate(zip(bars, success_rates)):
             ax.text(rate + 1, i, f'{rate:.1f}%', va='center', fontweight='bold')
         
-        st.pyplot(fig, use_container_width=True)
+        st.pyplot(fig, width='stretch')
     
     with viz_tab3:
         # Detailed test information

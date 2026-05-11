@@ -258,39 +258,69 @@ class VelocityPredictor:
     def generate_velocity_report(self, planned_sp_options: List[int] = None) -> pd.DataFrame:
         """
         Generate comprehensive velocity forecast report.
-        
+
+        Default (no args): quantile-based rows — each row answers "what SP can we target
+        at a given probability level?", avoiding cliff-edges from fixed step sizes.
+
         Args:
-            planned_sp_options: List of story point options to evaluate (default: [30, 35, 40, 45, 50])
-            
+            planned_sp_options: If provided, evaluate these fixed SP values instead.
+
         Returns:
-            DataFrame with forecast for each option
+            DataFrame with forecast for each option.
         """
-        if planned_sp_options is None:
-            planned_sp_options = [30, 35, 40, 45, 50]
-
+        mean = self.baseline_velocity + self.trend
+        std = max(1, self.volatility)
         report_rows = []
-        
-        for planned_sp in planned_sp_options:
-            prob_success = self.estimate_sprint_completion_probability(planned_sp, confidence_level=0.80)
-            
-            # Risk category
-            if prob_success > 0.80:
-                risk_category = "Low Risk"
-            elif prob_success > 0.60:
-                risk_category = "Medium Risk"
-            elif prob_success > 0.40:
-                risk_category = "High Risk"
-            else:
-                risk_category = "Very High Risk"
 
-            report_rows.append({
-                "PlannedSP": planned_sp,
-                "SuccessProbability": round(prob_success * 100, 1),
-                "RiskCategory": risk_category,
-                "Recommendation": "✓ Safe" if prob_success > 0.80 else (
-                    "⚠ Caution" if prob_success > 0.60 else "✗ High Risk"
-                ),
-            })
+        if planned_sp_options is None:
+            # Derive SP targets from probability levels so the table is always
+            # meaningful regardless of how narrow or wide the team's distribution is.
+            probability_targets = [0.90, 0.75, 0.50, 0.25, 0.10]
+
+            for prob in probability_targets:
+                # P(X >= sp) = prob  =>  sp = ppf(1 - prob)
+                planned_sp = max(1, round(stats.norm.ppf(1 - prob, loc=mean, scale=std)))
+
+                if prob >= 0.80:
+                    risk_category = "Low Risk"
+                    recommendation = "✓ Safe"
+                elif prob >= 0.60:
+                    risk_category = "Medium Risk"
+                    recommendation = "⚠ Caution"
+                elif prob >= 0.40:
+                    risk_category = "High Risk"
+                    recommendation = "✗ High Risk"
+                else:
+                    risk_category = "Very High Risk"
+                    recommendation = "✗ High Risk"
+
+                report_rows.append({
+                    "ProbabilityTarget": f"{int(prob * 100)}%",
+                    "PlannedSP": planned_sp,
+                    "RiskCategory": risk_category,
+                    "Recommendation": recommendation,
+                })
+        else:
+            for planned_sp in planned_sp_options:
+                prob_success = self.estimate_sprint_completion_probability(planned_sp, confidence_level=0.80)
+
+                if prob_success > 0.80:
+                    risk_category = "Low Risk"
+                elif prob_success > 0.60:
+                    risk_category = "Medium Risk"
+                elif prob_success > 0.40:
+                    risk_category = "High Risk"
+                else:
+                    risk_category = "Very High Risk"
+
+                report_rows.append({
+                    "PlannedSP": planned_sp,
+                    "SuccessProbability": round(prob_success * 100, 1),
+                    "RiskCategory": risk_category,
+                    "Recommendation": "✓ Safe" if prob_success > 0.80 else (
+                        "⚠ Caution" if prob_success > 0.60 else "✗ High Risk"
+                    ),
+                })
 
         return pd.DataFrame(report_rows)
 
@@ -400,13 +430,18 @@ class VelocityPredictor:
         y = stats.norm.pdf(x, self.baseline_velocity + self.trend, self.volatility)
         ax.plot(x, y, "-", linewidth=2.5, color="#0D47A1", alpha=0.9, label="Expected Pattern")
 
-        # Clean percentile lines
+        # Percentile lines showing P(X >= p_value) = p%
+        # np.percentile(samples, 100-p) gives the value where p% of velocity outcomes are >= it
         percentiles = [50, 80, 90]
         colors = ["#4CAF50", "#FF9800", "#F44336"]
-        labels = ["50% likely (median)", "80% likely (safe bet)", "90% likely (optimistic)"]
+        labels = [
+            "50% chance ≥ this SP (median)",
+            "80% chance ≥ this SP (safe bet)",
+            "90% chance ≥ this SP (conservative)",
+        ]
 
         for p, color, label in zip(percentiles, colors, labels):
-            p_value = np.percentile(samples, p)
+            p_value = np.percentile(samples, 100 - p)
             ax.axvline(p_value, color=color, linestyle="-", linewidth=2, alpha=0.8, label=label)
 
         # Clean baseline reference

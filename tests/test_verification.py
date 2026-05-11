@@ -78,25 +78,28 @@ class ConstraintValidator:
     def check_capacity_constraint(self, team_df: pd.DataFrame, allocation_df: pd.DataFrame, tasks_df: pd.DataFrame) -> Tuple[bool, str]:
         """
         Check if any member exceeds 100% utilization.
-        Assumes Availability_Hours in team_df and EstimatedHours in allocation_df.
-        
+        Uses ActualHours (= EstimatedHours / efficiency) so that the check matches
+        what the allocator deducts from each member's remaining capacity.
+
         Return: (is_valid, message)
         """
         violations = []
-        
-        # Calculate total hours allocated per member
-        member_hours = allocation_df.groupby('AssignedTo')['EstimatedHours'].sum()
-        
+
+        # Use ActualHours (efficiency-adjusted) — the allocator deducts actual time,
+        # not raw estimated time, from each member's available hours.
+        hour_col = 'ActualHours' if 'ActualHours' in allocation_df.columns else 'EstimatedHours'
+        member_hours = allocation_df.groupby('AssignedTo')[hour_col].sum()
+
         for member_name, total_hours in member_hours.items():
             member = team_df[team_df['Name'] == member_name]
             if not member.empty:
                 available_hours = member.iloc[0].get('Availability_Hours', 40)
                 utilization = total_hours / available_hours if available_hours > 0 else 0
-                
+
                 if utilization > 1.0:
                     violations.append(
                         f"{member_name}: {utilization:.1%} utilization "
-                        f"({total_hours:.1f}h/{available_hours}h)"
+                        f"({total_hours:.1f}h actual/{available_hours}h available)"
                     )
         
         is_valid = len(violations) == 0
